@@ -1,0 +1,27 @@
+# Archivos de datos masivos (NO subir al repositorio - penalización de 5 pts)
+*.csv
+ventas_*.csv
+data/input/*.csv
+
+# Variables de entorno con credenciales
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Hadoop y salidas
+data/output/
+resultado/
+_SUCCESS
+part-*
+
+# Docker y temporales
+*.log
+.DS_Store
+Thumbs.db

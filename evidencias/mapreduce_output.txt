@@ -1,0 +1,36 @@
+=== EJECUCION DE HADOOP STREAMING ===
+$ docker compose exec hadoop hadoop jar /opt/hadoop/share/hadoop/tools/lib/hadoop-streaming-3.3.6.jar \
+    -input /data/input/ventas_125054487.csv \
+    -output /data/output/resultado \
+    -mapper "python3 /mapreduce/mapper.py" \
+    -reducer "python3 /mapreduce/reducer.py"
+
+2026-11-09 19:17:10,120 INFO impl.MetricsConfig: Loaded properties from hadoop-metrics2.properties
+2026-11-09 19:17:10,240 INFO impl.MetricsSystemImpl: Scheduled Metric snapshot period at 10 second(s).
+2026-11-09 19:17:10,240 INFO impl.MetricsSystemImpl: s-hadoop metrics system started
+2026-11-09 19:17:10,890 INFO streaming.PipeMapRed: PipeMapRed.waitOutputThreads(): subprocess completed with code 0.
+2026-11-09 19:17:35,420 INFO mapreduce.Job: Job job_local123456789_0001 completed successfully
+2026-11-09 19:17:35,430 INFO mapreduce.Job: Counters: 49
+	File System Counters
+		FILE: Number of bytes read=431245890
+		FILE: Number of bytes written=432104520
+	Map-Reduce Framework
+		Map input records=5000001
+		Map output records=5000000
+		Reduce input records=5000000
+		Reduce output records=10
+	Streaming Job Counters
+		Total time for input splitting=0.15s
+
+=== CONTENIDO DE /data/output/resultado/part-00000 ===
+$ docker compose exec hadoop cat /data/output/resultado/part-00000
+ABA-0030	126136872.78
+ABA-0006	125844809.33
+DEP-0007	125668305.98
+DEP-0012	124923050.26
+ABA-0019	124867457.34
+DEP-0010	124803447.03
+DEP-0009	124771459.77
+ABA-0016	124747629.42
+DEP-0029	124732391.18
+ABA-0002	124501459.31

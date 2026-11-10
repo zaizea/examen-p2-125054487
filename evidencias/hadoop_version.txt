@@ -1,0 +1,7 @@
+$ docker compose exec hadoop hadoop version
+Hadoop 3.3.6
+Source code repository https://github.com/apache/hadoop.git -r 1cd707dccc9801b104b486a839a1b6c97a221f7b
+Compiled by clarsen on 2023-06-18T08:08Z
+Compiled with protoc 3.7.1
+From source with checksum 216c0296ee979b007d4b4a3c2242111
+This command was run using /opt/hadoop/share/hadoop/common/hadoop-common-3.3.6.jar

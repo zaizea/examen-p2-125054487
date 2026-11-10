@@ -1,0 +1,100 @@
+name: examen-p2-125054487
+
+services:
+  # 1. Servicio Hadoop Standalone con OpenSSH Server
+  hadoop:
+    build:
+      context: ./hadoop
+      dockerfile: Dockerfile
+    container_name: hadoop-125054487
+    hostname: hadoop
+    networks:
+      red-examen-125054487:
+        aliases:
+          - hadoop
+    ports:
+      - "${HADOOP_SSH_PORT:-2222}:22"
+    volumes:
+      # Dataset montado como volumen de solo lectura en /data/input (Requisito A2)
+      - ./ventas_125054487.csv:/data/input/ventas_125054487.csv:ro
+      - ./data/output:/data/output
+      - ./mapreduce:/mapreduce
+      - ssh_shared_125054487:/shared_ssh
+
+  # 2. Servicio Base de Datos PostgreSQL con volumen nombrado para persistencia
+  db:
+    image: postgres:15-alpine
+    container_name: db-125054487
+    hostname: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ventas_db}
+      POSTGRES_USER: ${POSTGRES_USER:-datamart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datamart_secure_pass}
+    volumes:
+      # Volumen nombrado para persistencia demostrable (Requisito A2 y Parte D)
+      - pgdata_125054487:/var/lib/postgresql/data
+    ports:
+      # Puerto 5433 en host para no colisionar con instalaciones existentes
+      - "${DB_PORT_HOST:-5433}:5432"
+    networks:
+      red-examen-125054487:
+        aliases:
+          - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datamart} -d ${POSTGRES_DB:-ventas_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Servicio API REST en Python (CRUD) conectada a db por nombre de servicio
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-125054487
+    hostname: api
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ventas_db}
+      POSTGRES_USER: ${POSTGRES_USER:-datamart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datamart_secure_pass}
+      DB_HOST: db
+      DB_PORT: 5432
+      PORT: 5000
+      MATRICULA: ${MATRICULA:-125054487}
+    ports:
+      # Puerto 5001 en host para evitar colisiones con el puerto 5000 previo
+      - "${API_PORT:-5001}:5000"
+    networks:
+      red-examen-125054487:
+        aliases:
+          - api
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/app/scripts
+      - ./data/output:/data/output:ro
+      - ssh_shared_125054487:/shared_ssh:ro
+    command: >
+      sh -c "
+        mkdir -p /root/.ssh &&
+        if [ -f /shared_ssh/id_rsa ]; then
+          cp /shared_ssh/id_rsa /root/.ssh/id_rsa &&
+          chmod 600 /root/.ssh/id_rsa;
+        fi &&
+        printf 'Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n' > /root/.ssh/config &&
+        python app.py
+      "
+
+networks:
+  red-examen-125054487:
+    driver: bridge
+    name: red_examen_125054487
+
+volumes:
+  pgdata_125054487:
+    name: pgdata_125054487
+  ssh_shared_125054487:
+    name: ssh_shared_125054487

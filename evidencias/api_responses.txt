@@ -1,0 +1,72 @@
+=== 1. GET http://localhost:5001/resultados ===
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "total_registros": 10,
+  "resultados": [
+    {"id": 1, "ranking": 1, "producto": "ABA-0030", "ingreso_total": 126136872.78, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 2, "ranking": 2, "producto": "ABA-0006", "ingreso_total": 125844809.33, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 3, "ranking": 3, "producto": "DEP-0007", "ingreso_total": 125668305.98, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 4, "ranking": 4, "producto": "DEP-0012", "ingreso_total": 124923050.26, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 5, "ranking": 5, "producto": "ABA-0019", "ingreso_total": 124867457.34, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 6, "ranking": 6, "producto": "DEP-0010", "ingreso_total": 124803447.03, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 7, "ranking": 7, "producto": "DEP-0009", "ingreso_total": 124771459.77, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 8, "ranking": 8, "producto": "ABA-0016", "ingreso_total": 124747629.42, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 9, "ranking": 9, "producto": "DEP-0029", "ingreso_total": 124732391.18, "fecha_carga": "2026-11-09T19:18:00"},
+    {"id": 10, "ranking": 10, "producto": "ABA-0002", "ingreso_total": 124501459.31, "fecha_carga": "2026-11-09T19:18:00"}
+  ]
+}
+
+=== 2. GET http://localhost:5001/resultados/ABA-0030 (FILTRO POR CLAVE) ===
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": 1,
+  "ranking": 1,
+  "producto": "ABA-0030",
+  "ingreso_total": 126136872.78,
+  "fecha_carga": "2026-11-09T19:18:00"
+}
+
+=== 3. POST http://localhost:5001/resultados (CRUD ESCRITURA - CREAR) ===
+Request Body:
+{"producto": "ELE-9999", "ingreso_total": 130000000.0, "ranking": 0}
+
+Response:
+HTTP/1.1 201 Created
+{
+  "mensaje": "Producto creado exitosamente",
+  "datos": {
+    "id": 11,
+    "ranking": 0,
+    "producto": "ELE-9999",
+    "ingreso_total": 130000000.0,
+    "fecha_carga": "2026-11-09T19:18:15"
+  }
+}
+
+=== 4. PUT http://localhost:5001/resultados/ELE-9999 (CRUD ESCRITURA - ACTUALIZAR) ===
+Request Body:
+{"ingreso_total": 135000000.0, "ranking": 1}
+
+Response:
+HTTP/1.1 200 OK
+{
+  "mensaje": "Producto actualizado",
+  "datos": {
+    "id": 11,
+    "ranking": 1,
+    "producto": "ELE-9999",
+    "ingreso_total": 135000000.0,
+    "fecha_carga": "2026-11-09T19:18:20"
+  }
+}
+
+=== 5. DELETE http://localhost:5001/resultados/ELE-9999 (CRUD ESCRITURA - ELIMINAR) ===
+Response:
+HTTP/1.1 200 OK
+{
+  "mensaje": "Producto 'ELE-9999' eliminado exitosamente"
+}

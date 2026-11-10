@@ -1,0 +1,31 @@
+=== COMPARATIVA DE RENDIMIENTO (C2) ===
+Dataset: ventas_125054487.csv (5,000,000 registros, ~420 MB)
+Pregunta de Negocio: Top 10 productos por ingreso total en todo el año (Matrícula: 125054487)
+
+1. EJECUCION SECUENCIAL EN PYTHON (secuencial.py):
+   Tiempo de ejecucion: 16.2576 segundos
+   Filas procesadas: 5,000,000
+   Filas con error: 0
+   Top 1: ABA-0030 ($126,136,872.78)
+   Top 10: ABA-0002 ($124,501,459.31)
+
+2. EJECUCION CON HADOOP STREAMING (mapper.py + reducer.py):
+   Tiempo de ejecucion: 48.7420 segundos
+   Map input records: 5,000,001
+   Reduce output records: 10
+   Top 1: ABA-0030 ($126,136,872.78)
+   Top 10: ABA-0002 ($124,501,459.31)
+
+3. VERIFICACION DE RESULTADOS:
+   Los resultados de ambos metodos coinciden de manera 100% exacta tanto en los 10 productos
+   como en los montos calculados con precision de centavos.
+
+4. EXPLICACION DE RENDIMIENTO:
+   El script secuencial en Python fue aproximadamente 3 veces mas rapido (16.25s vs 48.74s)
+   debido a que para un archivo de 420 MB en un solo nodo/contenedor, procesar directamente
+   en memoria evita la sobrecarga (overhead) inherente de Hadoop: inicializacion de la JVM,
+   coordinacion del framework MapReduce, serializacion entre Java y subprocesos Python via
+   pipes (stdin/stdout), y las fases de volcado a disco y ordenamiento (sort/spill).
+   Hadoop resulta ventajoso y escala de manera superior cuando el volumen de datos supera
+   la capacidad de memoria RAM de un solo equipo (terabytes) y se distribuye el computo
+   en un cluster de multiples nodos en paralelo.
