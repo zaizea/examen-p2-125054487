@@ -8,7 +8,7 @@ Pregunta: Top 10 productos por ingreso total.
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template_string
 
 app = Flask(__name__)
 
@@ -17,7 +17,7 @@ DB_HOST = os.getenv("DB_HOST", "db")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("POSTGRES_DB", "ventas_db")
 DB_USER = os.getenv("POSTGRES_USER", "datamart")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "datamart_secure_pass")
+DB_PASS = os.environ["POSTGRES_PASSWORD"]
 
 def get_db_connection():
     return psycopg2.connect(
@@ -199,6 +199,28 @@ def eliminar_resultado(clave):
             return jsonify({"error": f"Producto '{clave}' no encontrado"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Vista HTML opcional: tabla con el Top 10
+@app.route("/tabla", methods=["GET"])
+def tabla():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""SELECT ranking, producto, CAST(ingreso_total AS FLOAT) AS ingreso_total
+                   FROM resultados_top_productos ORDER BY ranking ASC, ingreso_total DESC;""")
+    filas = cur.fetchall()
+    cur.close()
+    conn.close()
+    html = """
+    <h2>Top 10 productos por ingreso total (matrícula 125054487)</h2>
+    <table border="1" cellpadding="8" style="border-collapse:collapse;font-family:sans-serif">
+      <tr><th>Ranking</th><th>Producto</th><th>Ingreso total</th></tr>
+      {% for f in filas %}
+      <tr><td>{{ f.ranking }}</td><td>{{ f.producto }}</td>
+          <td>${{ "{:,.2f}".format(f.ingreso_total) }}</td></tr>
+      {% endfor %}
+    </table>
+    """
+    return render_template_string(html, filas=filas)
 
 if __name__ == "__main__":
     init_db()

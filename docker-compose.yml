@@ -30,7 +30,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ventas_db}
       POSTGRES_USER: ${POSTGRES_USER:-datamart}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datamart_secure_pass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD, copia .env.example a .env}
     volumes:
       # Volumen nombrado para persistencia demostrable (Requisito A2 y Parte D)
       - pgdata_125054487:/var/lib/postgresql/data
@@ -58,14 +58,14 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ventas_db}
       POSTGRES_USER: ${POSTGRES_USER:-datamart}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datamart_secure_pass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD, copia .env.example a .env}
       DB_HOST: db
       DB_PORT: 5432
       PORT: 5000
       MATRICULA: ${MATRICULA:-125054487}
     ports:
       # Puerto 5001 en host para evitar colisiones con el puerto 5000 previo
-      - "${API_PORT:-5001}:5000"
+      - "${API_PORT:-5000}:5000"
     networks:
       red-examen-125054487:
         aliases:

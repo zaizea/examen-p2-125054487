@@ -26,13 +26,13 @@
 ## 🏗 Descripción del Proyecto y Arquitectura
 
 El pipeline implementa un ambiente contenerizado, reproducible y completamente aislado que:
-1. **Genera** un dataset sintético masivo de 5,000,000 de registros de ventas (~420 MB) usando la matrícula `125054487` como semilla determinista.
+1. **Genera** un dataset sintético masivo de 5,000,000 de registros de ventas (~336 MB) usando la matrícula `125054487` como semilla determinista.
 2. **Procesa** los datos con **Apache Hadoop MapReduce (Streaming)** en modo standalone con scripts optimizados en Python (`mapper.py` y `reducer.py`).
 3. **Almacena** los resultados agregados en una base de datos relacional **PostgreSQL 15** mediante el script de ingesta `cargar_resultados.py` con persistencia garantizada en volúmenes nombrados.
 4. **Expone** los resultados y operaciones CRUD completas mediante una **API REST en Flask**, consumible desde la red o desde el host.
 5. **Configura OpenSSH Server** con autenticación de llaves asimétricas sin contraseña tanto internamente en el nodo Hadoop (`ssh localhost`) como inter-servicios desde el contenedor `api` hacia `hadoop`.
 
-> **Nota de Aislamiento:** El proyecto está configurado con identificadores únicos (`125054487`) en nombre de proyecto, contenedores (`hadoop-125054487`, `db-125054487`, `api-125054487`), puertos de host (`5001` y `5433`) y volumen de persistencia (`pgdata_125054487`), garantizando que no existan colisiones con otros proyectos Docker en la máquina.
+> **Nota de Aislamiento:** El proyecto está configurado con identificadores únicos (`125054487`) en nombre de proyecto, contenedores (`hadoop-125054487`, `db-125054487`, `api-125054487`), puertos de host (`5000` y `5433`) y volumen de persistencia (`pgdata_125054487`), garantizando que no existan colisiones con otros proyectos Docker en la máquina.
 
 ---
 
@@ -78,7 +78,7 @@ cp .env.example .env
 
 # 2. Generar el dataset de 5,000,000 registros para la matrícula 125054487
 python generar_dataset.py 125054487
-# Esto genera el archivo ventas_125054487.csv (~420 MB).
+# Esto genera el archivo ventas_125054487.csv (~336 MB).
 ```
 
 ### 2. Construir y levantar el ambiente
@@ -113,13 +113,13 @@ docker compose exec api python /app/scripts/cargar_resultados.py /data/output/re
 - Desde el navegador o mediante `curl`:
   ```bash
   # Listar todo el Top 10
-  curl http://localhost:5001/resultados
+  curl http://localhost:5000/resultados
 
   # Consultar un producto específico (clave)
-  curl http://localhost:5001/resultados/ABA-0030
+  curl http://localhost:5000/resultados/ABA-0030
 
   # Insertar un nuevo producto (escritura CRUD)
-  curl -X POST http://localhost:5001/resultados \
+  curl -X POST http://localhost:5000/resultados \
        -H "Content-Type: application/json" \
        -d '{"producto": "ELE-9999", "ingreso_total": 130000000.0, "ranking": 0}'
   ```
@@ -128,18 +128,19 @@ docker compose exec api python /app/scripts/cargar_resultados.py /data/output/re
 
 ## ⏱ Comparativa de Rendimiento (C2)
 
-Para responder a la pregunta de negocio (*Top 10 productos por ingreso total en todo el año*), se comparó la ejecución secuencial directa en Python frente al procesamiento con Hadoop MapReduce sobre los 5,000,000 de registros:
+Para responder la pregunta de negocio (*Top 10 productos por ingreso total en todo el año*) se comparó un script secuencial en Python contra Hadoop Streaming sobre los 5,000,000 de registros (~336 MB). Ambos se ejecutaron dentro del contenedor `hadoop` y se midieron con `time`.
 
-| Métrica / Enfoque | Script Secuencial (`secuencial.py`) | Hadoop Streaming (`mapper.py + reducer.py`) |
+| Métrica | Script Secuencial (`secuencial.py`) | Hadoop Streaming (`mapper.py + reducer.py`) |
 | :--- | :---: | :---: |
-| **Tiempo de Ejecución** | **16.25 segundos** | **48.74 segundos** |
-| **Filas Procesadas** | 5,000,000 | 5,000,000 |
-| **Top 1 Producto** | `ABA-0030` (\$126,136,872.78) | `ABA-0030` (\$126,136,872.78) |
-| **Top 10 Producto** | `ABA-0002` (\$124,501,459.31) | `ABA-0002` (\$124,501,459.31) |
-| **Coincidencia de datos** | 100% Exacta | 100% Exacta |
+| **Tiempo real** | **9.769 s** | **21.929 s** |
+| Tiempo de CPU (user) | 3.792 s | 18.557 s |
+| Productos en el Top | 10 | 10 |
+| Top 1 | `ABA-0030` ($126,136,872.78) | `ABA-0030` ($126,136,872.78) |
+| Top 10 | `ABA-0002` ($124,501,459.31) | `ABA-0002` ($124,501,459.31) |
+| Coincidencia | Exacta | Exacta |
 
-### Justificación de Rendimiento (Párrafo explicativo):
-> En este escenario de un único archivo de ~420 MB en una sola máquina/contenedor, el script secuencial en Python fue aproximadamente **3 veces más rápido** que Hadoop. Esto ocurre porque un archivo de este tamaño cabe holgadamente en la memoria RAM y el script secuencial lo procesa en un único proceso en memoria CPython sin capas intermedias. Por el contrario, Hadoop Streaming incurre en una alta sobrecarga (*overhead*): tiempo de arranque e inicialización de la JVM de Java, coordinación del framework MapReduce, serialización y transmisión de 5 millones de registros línea por línea a través de tuberías estándar de entrada/salida (`stdin`/`stdout`) hacia los subprocesos de Python, y las fases de ordenamiento intermedio y volcado a disco (*spill & merge*). Hadoop MapReduce no está optimizado para archivos pequeños en un solo nodo; su ventaja real emerge a partir de decenas o cientos de gigabytes (y terabytes) distribuidos en clústeres de múltiples máquinas trabajando en paralelo.
+### Justificación
+> El script secuencial fue aproximadamente **2.2 veces más rápido** que Hadoop. Con un solo archivo de ~336 MB en una sola máquina, Hadoop paga costos fijos que no se compensan: arrancar la JVM, planear el job, partir el archivo en 11 splits, lanzar un subproceso de Python por tarea y pasar los datos por pipes (stdin/stdout), además de ordenar y volcar a disco 10 millones de registros intermedios (*spill*) antes del reduce. El secuencial solo lee el archivo una vez y acumula en un diccionario de 519 productos. Hadoop conviene cuando los datos superan la memoria de una máquina y se pueden repartir entre varios nodos en paralelo.
 
 ---
 
@@ -149,10 +150,11 @@ Para responder a la pregunta de negocio (*Top 10 productos por ingreso total en 
 Verificación del comando `hadoop version` dentro del contenedor:
 ```text
 Hadoop 3.3.6
-Source code repository https://github.com/apache/hadoop.git -r 1cd707dccc9801b104b486a839a1b6c97a221f7b
-Compiled by clarsen on 2023-06-18T08:08Z
+Source code repository https://github.com/apache/hadoop.git -r 1be78238728da9266a4f88195058f08fd012bf9c
+Compiled by ubuntu on 2023-06-18T08:22Z
+Compiled on platform linux-x86_64
 Compiled with protoc 3.7.1
-From source with checksum 216c0296ee979b007d4b4a3c2242111
+From source with checksum 5652179ad55f76cb287d9c633bb53bbd
 This command was run using /opt/hadoop/share/hadoop/common/hadoop-common-3.3.6.jar
 ```
 
@@ -160,13 +162,17 @@ This command was run using /opt/hadoop/share/hadoop/common/hadoop-common-3.3.6.j
 Demostración de acceso sin contraseña por llaves (`ssh-keygen + authorized_keys`):
 
 ```bash
-# Acceso localhost dentro del contenedor hadoop:
-docker compose exec hadoop ssh hadoop@localhost "echo 'Conexión SSH localhost exitosa en hadoop: $(hostname)'"
-# Salida: Conexión SSH localhost exitosa en hadoop: hadoop
+# 1) SSH localhost dentro del contenedor hadoop (sin contraseña)
+$ docker compose exec hadoop ssh hadoop@localhost 'echo SSH localhost OK; hostname; whoami'
+SSH localhost OK
+hadoop
+hadoop
 
-# Acceso desde api hacia hadoop por nombre de servicio:
-docker compose exec api ssh hadoop@hadoop "echo 'Conexión desde API hacia hadoop exitosa: $(hostname) - $(whoami)'"
-# Salida: Conexión desde API hacia hadoop exitosa: hadoop - hadoop
+# 2) SSH desde el contenedor api hacia hadoop, por nombre de servicio (sin contraseña)
+$ docker compose exec api ssh hadoop@hadoop 'echo SSH api a hadoop OK; hostname; whoami'
+SSH api a hadoop OK
+hadoop
+hadoop
 ```
 
 ### 3. Salida del Job Hadoop Streaming
@@ -184,38 +190,68 @@ DEP-0029	124732391.18
 ABA-0002	124501459.31
 ```
 
+Contadores y tiempo reales del job (`time` dentro del contenedor):
+
+```text
+Reduce output records=10
+Spilled Records=10000000
+Shuffled Maps =11
+Bytes Read=352230300
+
+real    0m21.929s
+user    0m18.557s
+sys     0m5.745s
+```
+
 ### 4. API REST y Persistencia
-Demostración de los endpoints activos en `http://localhost:5001`:
+Demostración de los endpoints activos en `http://localhost:5000`:
 
-#### `GET /resultados`
-```json
+#### Respuestas reales de la API (GET, POST, PUT y DELETE)
+
+```text
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.9 Python/3.11.18
+Date: Wed, 11 Nov 2026 22:57:35 GMT
+Content-Type: application/json
+Content-Length: 1220
+Connection: close
+
+{"resultados":[{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":1,"ingreso_total":126136872.78,"producto":"ABA-0030","ranking":1},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":2,"ingreso_total":125844809.33,"producto":"ABA-0006","ranking":2},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":3,"ingreso_total":125668305.98,"producto":"DEP-0007","ranking":3},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":4,"ingreso_total":124923050.26,"producto":"DEP-0012","ranking":4},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":5,"ingreso_total":124867457.34,"producto":"ABA-0019","ranking":5},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":6,"ingreso_total":124803447.03,"producto":"DEP-0010","ranking":6},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":7,"ingreso_total":124771459.77,"producto":"DEP-0009","ranking":7},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":8,"ingreso_total":124747629.42,"producto":"ABA-0016","ranking":8},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":9,"ingreso_total":124732391.18,"producto":"DEP-0029","ranking":9},{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":10,"ingreso_total":124501459.31,"producto":"ABA-0002","ranking":10}],"total_registros":10}
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.9 Python/3.11.18
+Date: Wed, 11 Nov 2026 22:57:52 GMT
+Content-Type: application/json
+Content-Length: 118
+Connection: close
+
+{"fecha_carga":"Wed, 11 Nov 2026 22:55:36 GMT","id":1,"ingreso_total":126136872.78,"producto":"ABA-0030","ranking":1}
 {
-  "total_registros": 10,
-  "resultados": [
-    {"id": 1, "ranking": 1, "producto": "ABA-0030", "ingreso_total": 126136872.78, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 2, "ranking": 2, "producto": "ABA-0006", "ingreso_total": 125844809.33, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 3, "ranking": 3, "producto": "DEP-0007", "ingreso_total": 125668305.98, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 4, "ranking": 4, "producto": "DEP-0012", "ingreso_total": 124923050.26, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 5, "ranking": 5, "producto": "ABA-0019", "ingreso_total": 124867457.34, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 6, "ranking": 6, "producto": "DEP-0010", "ingreso_total": 124803447.03, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 7, "ranking": 7, "producto": "DEP-0009", "ingreso_total": 124771459.77, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 8, "ranking": 8, "producto": "ABA-0016", "ingreso_total": 124747629.42, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 9, "ranking": 9, "producto": "DEP-0029", "ingreso_total": 124732391.18, "fecha_carga": "2026-11-09T19:18:00"},
-    {"id": 10, "ranking": 10, "producto": "ABA-0002", "ingreso_total": 124501459.31, "fecha_carga": "2026-11-09T19:18:00"}
-  ]
+    "datos":  {
+                  "fecha_carga":  "Wed, 11 Nov 2026 23:00:28 GMT",
+                  "id":  11,
+                  "ingreso_total":  130000000.0,
+                  "producto":  "ELE-9999",
+                  "ranking":  0
+              },
+    "mensaje":  "Producto creado exitosamente"
 }
+{
+    "datos":  {
+                  "fecha_carga":  "Wed, 11 Nov 2026 23:00:44 GMT",
+                  "id":  11,
+                  "ingreso_total":  131000000.0,
+                  "producto":  "ELE-9999",
+                  "ranking":  0
+              },
+    "mensaje":  "Producto actualizado"
+}
+{
+    "mensaje":  "Producto \u0027ELE-9999\u0027 eliminado exitosamente"
+}
+
 ```
 
-#### `GET /resultados/ABA-0030` (Filtro por clave)
-```json
-{
-  "id": 1,
-  "ranking": 1,
-  "producto": "ABA-0030",
-  "ingreso_total": 126136872.78,
-  "fecha_carga": "2026-11-09T19:18:00"
-}
-```
+
 
 #### Demostración de Persistencia:
 Al ejecutar:

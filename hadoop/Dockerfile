@@ -53,9 +53,10 @@ RUN mkdir -p /root/.ssh \
 RUN mkdir -p /data/input /data/output /mapreduce \
     && chown -R hadoop:hadoop /data /mapreduce
 
-# 7. Copiar script de arranque
+# 7. Copiar script de arranque (convirtiendo CRLF a LF por si acaso)
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR /mapreduce
 

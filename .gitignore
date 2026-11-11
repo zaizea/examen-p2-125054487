@@ -25,3 +25,5 @@ part-*
 *.log
 .DS_Store
 Thumbs.db
+
+*.zip

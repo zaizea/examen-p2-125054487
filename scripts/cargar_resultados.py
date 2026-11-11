@@ -36,7 +36,7 @@ def main():
     db_port = os.getenv("DB_PORT", "5432")
     db_name = os.getenv("POSTGRES_DB", "ventas_db")
     db_user = os.getenv("POSTGRES_USER", "datamart")
-    db_pass = os.getenv("POSTGRES_PASSWORD", "datamart_secure_pass")
+    db_pass = os.environ["POSTGRES_PASSWORD"]
 
     print(f"Conectando a PostgreSQL en {db_host}:{db_port}/{db_name} con usuario {db_user}...")
 
