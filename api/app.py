@@ -60,6 +60,7 @@ def index():
         "endpoints": {
             "GET /resultados": "Listar todos los productos en el Top",
             "GET /resultados/<clave>": "Filtrar por código de producto (ej: ABA-0030)",
+            "GET /tabla": "Vista HTML: Top 10 en tabla",
             "POST /resultados": "Registrar un nuevo producto (JSON: producto, ingreso_total, ranking)",
             "PUT /resultados/<clave>": "Actualizar ingreso o ranking de un producto",
             "DELETE /resultados/<clave>": "Eliminar un producto del registro"
