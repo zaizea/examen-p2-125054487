@@ -258,7 +258,7 @@ Al ejecutar:
 ```bash
 docker compose down
 docker compose up -d
-curl http://localhost:5001/resultados
+curl http://localhost:5000/resultados
 ```
 Los datos permanecen intactos gracias al volumen nombrado `pgdata_125054487`.
 
@@ -296,7 +296,7 @@ Durante la defensa oral (5 a 7 minutos), el profesor pedirá modificaciones en v
 
 ### 1. Cambiar el puerto expuesto de la API y volver a levantar
 - **Opción A (por archivo `.env`):**
-  Edita `.env` y cambia `API_PORT=5001` por otro puerto, por ejemplo:
+  Edita `.env` y cambia `API_PORT=5000` por otro puerto, por ejemplo:
   ```env
   API_PORT=5002
   ```
@@ -344,7 +344,7 @@ docker compose up -d
 docker compose exec api python /app/scripts/cargar_resultados.py /data/output/resultado/part-00000
 
 # 4. Verificar que volvieron a cargarse:
-curl http://localhost:5001/resultados
+curl http://localhost:5000/resultados
 ```
 
 ### 4. Explicación línea por línea de Dockerfile y Compose

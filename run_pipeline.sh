@@ -39,9 +39,9 @@ echo "[4/5] Cargando resultados en PostgreSQL..."
 docker compose exec api python3 /app/scripts/cargar_resultados.py /data/output/resultado/part-00000
 
 # 5. Probar API
-echo "[5/5] Probando API REST en http://localhost:5001..."
-curl -s http://localhost:5001/resultados | python3 -m json.tool
-curl -s http://localhost:5001/resultados/ABA-0030 | python3 -m json.tool
+echo "[5/5] Probando API REST en http://localhost:5000..."
+curl -s http://localhost:5000/resultados | python3 -m json.tool
+curl -s http://localhost:5000/resultados/ABA-0030 | python3 -m json.tool
 
 echo "=========================================================="
 echo "  ¡Pipeline completado con éxito!                        "

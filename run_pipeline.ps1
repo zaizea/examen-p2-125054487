@@ -36,10 +36,10 @@ Write-Host "`n[4/5] Cargando resultados en PostgreSQL..." -ForegroundColor Yello
 docker compose exec api python /app/scripts/cargar_resultados.py /data/output/resultado/part-00000
 
 # 5. Probar API REST
-Write-Host "`n[5/5] Probando endpoints de la API en http://localhost:5001..." -ForegroundColor Yellow
+Write-Host "`n[5/5] Probando endpoints de la API en http://localhost:5000..." -ForegroundColor Yellow
 Write-Host "-> Probando GET /resultados:" -ForegroundColor Gray
 try {
-    $res = Invoke-RestMethod -Uri "http://localhost:5001/resultados" -Method Get
+    $res = Invoke-RestMethod -Uri "http://localhost:5000/resultados" -Method Get
     $res | ConvertTo-Json -Depth 4
 } catch {
     Write-Host "Error consultando API: $_" -ForegroundColor Red
@@ -47,7 +47,7 @@ try {
 
 Write-Host "`n-> Probando GET /resultados/ABA-0030 (Filtro por producto):" -ForegroundColor Gray
 try {
-    $prod = Invoke-RestMethod -Uri "http://localhost:5001/resultados/ABA-0030" -Method Get
+    $prod = Invoke-RestMethod -Uri "http://localhost:5000/resultados/ABA-0030" -Method Get
     $prod | ConvertTo-Json -Depth 4
 } catch {
     Write-Host "Error consultando producto: $_" -ForegroundColor Red
